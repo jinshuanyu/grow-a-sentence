@@ -488,12 +488,16 @@
 
         function readSentence() {
             const validKeys = visibleStages.filter(k => currentSentenceData[k].trim() !== "");
-            const textToSpeak = validKeys.map(k => currentSentenceData[k]).join(' ');
+            const originalText = validKeys.map(k => currentSentenceData[k]).join(' ');
 
-            if (!textToSpeak) return;
+            if (!originalText) return;
+
+            // 偷吃步：把 read 替換成 red (紅色)，這樣電腦就會發出正確的過去式音 /rɛd/
+            // \b 代表單字邊界，確保只替換單獨的 read
+            const textForAudio = originalText.replace(/\bread\b/gi, "red");
 
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            const utterance = new SpeechSynthesisUtterance(textForAudio);
             const voice = getPreferredVoice();
             if (voice) utterance.voice = voice;
             utterance.lang = 'en-US';
