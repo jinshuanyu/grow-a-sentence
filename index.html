@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Grow a Sentence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'ABeeZee', sans-serif; }
+        
+        /* Animation for new cards */
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .new-card-anim { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        
+        /* Text pop animation for rolling */
+        .text-pop { animation: textPop 0.4s ease-out; }
+        @keyframes textPop {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        /* Button pulse */
+        .pulse-btn { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
+
+        .hidden { display: none !important; }
+        
+        /* Custom Input Styling */
+        .custom-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px dashed #cbd5e1;
+            text-align: center;
+            width: 100%;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .custom-input:focus {
+            border-bottom: 2px solid #4F46E5;
+            background: rgba(255,255,255,0.5);
+        }
+
+        /* Sentence Display Tweaks */
+        .sentence-word {
+            display: inline-block;
+            margin-right: 0.25em; 
+        }
+        .sentence-period {
+            display: inline-block;
+            margin-left: -0.2em;
+            color: #312e81;
+        }
+
+        /* 黃色文字最終定案：使用您指定的 #ffdc11 */
+        .text-yellow-pop {
+            color: #ffdc11; 
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-orange-50 flex flex-col items-center p-4 pb-20">
+
+    <div class="text-center mt-6 mb-8">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-orange-600 tracking-wide mb-1">
+            🌱 Grow a Sentence
+        </h1>
+        <h2 class="text-xl md:text-2xl font-bold text-orange-400">
+            Roll the dice to make it grow!
+        </h2>
+    </div>
+
+    <div class="bg-white/90 backdrop-blur-md p-4 rounded-[1.5rem] shadow-xl border-b-8 border-orange-200 w-full max-w-6xl flex flex-col items-center min-h-[500px]">
+        
+        <div id="reels-container" class="flex flex-wrap justify-center items-start gap-2 w-full mb-6 mt-4 transition-all">
+            </div>
+
+        <div class="bg-white text-gray-800 p-6 rounded-2xl shadow-sm w-full max-w-4xl min-h-[80px] flex items-center justify-center relative mb-8 border-4 border-indigo-100">
+            <p id="sentence-display" class="text-xl md:text-3xl leading-relaxed text-center tracking-wide font-extrabold">
+                Loading...
+            </p>
+        </div>
+
+        <div class="flex gap-4 flex-wrap justify-center items-center pb-8 w-full">
+            
+            <button id="btn-expand" onclick="expandRandomly()" class="pulse-btn group bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-[0_5px_0_rgb(30,58,138)] active:translate-y-[5px] active:shadow-none transition-all flex items-center gap-2 text-xl">
+                <span class="text-2xl group-hover:rotate-180 transition-transform duration-500">🎲</span> 
+                Add Detail
+            </button>
+
+            <button id="btn-reset" onclick="nextQuestion()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_0_rgb(88,28,135)] active:translate-y-[4px] active:shadow-none transition-all flex items-center gap-2 text-lg">
+                <span>➡️</span> Next Sentence
+            </button>
+        </div>
+    </div>
+
+    <footer class="mt-8 w-full max-w-2xl text-center pb-8">
+      <div class="credits text-sm text-gray-600 leading-snug">
+        © 2025 Christina Yu. All rights reserved. <br />
+        <div class="mt-2 space-x-3 text-blue-700">
+            <a href="mailto:mamahowma@gmail.com" class="hover:text-blue-900 transition">
+                <i class="fa-solid fa-envelope text-xl"></i>
+            </a>
+            <a href="https://www.facebook.com/mamahowma" target="_blank" class="hover:text-blue-900 transition">
+                <i class="fa-brands fa-facebook text-xl"></i>
+            </a>
+            <a href="https://portaly.cc/mamahowma/support" target="_blank" class="hover:text-blue-900 transition">
+                <i class="fa-solid fa-mug-hot text-xl"></i>
+            </a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+        // ==========================================
+        // 1. 文法與資料庫
+        // ==========================================
+        
+        const GRAMMAR_ORDER = ['subject', 'verb', 'object', 'how', 'place', 'when'];
+
+        const SUBJECT_POOL = [
+            "The dog", "My mom", "The girl", "The artist", "The student", 
+            "The teacher", "The boy", "My dad", "The baby", "We", 
+            "A robot", "The cat", "Batman", "A giant"
+        ];
+
+        // Ambitransitive Verbs Only
+        const VERB_POOL = [
+            "ate", "cooked", "sang", "painted", "wrote", 
+            "read", "played", "cleaned", "drank", "studied",
+            "drove", "drew", "watched", "packed", "washed"
+        ];
+
+        const EXPANSION_DATA = {
+            object: [ 
+                "a pizza", "a song", "the ball", "a picture", "some water", 
+                "a big apple", "the door", "a funny story", "his homework", "a bug",
+                "a rainbow", "the moon", "a new toy", "the bus", "dinner", "lunch"
+            ],
+            how: [ 
+                "loudly", "quickly", "happily", "slowly", "sadly", 
+                "carefully", "quietly", "with a smile", "angrily", "excitedly",
+                "secretly", "wildly"
+            ],
+            place: [ 
+                "in the park", "at home", "in the kitchen", "at school", "under the tree", 
+                "in the car", "on the bed", "outside", "in the garden", "by the river",
+                "on Mars", "in a box"
+            ],
+            when: [ 
+                "yesterday", "last night", "in the morning", "after school", "at noon", 
+                "before dinner", "suddenly", "last week", "today", "at midnight"
+            ]
+        };
+
+        const CARD_TITLES = { 
+            subject: "WHO?", verb: "DID WHAT?", 
+            object: "WHAT?", how: "HOW?", place: "WHERE?", when: "WHEN?" 
+        };
+
+        // 顏色設定：
+        // 黃色已改為 #ffdc11 (text-yellow-pop)
+        const COLORS = {
+            subject: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-rose-600' },
+            verb:    { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-500' },
+            object:  { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-pop' }, 
+            how:     { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600' },
+            place:   { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
+            when:    { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-600' }
+        };
+
+        // ==========================================
+        // 2. 遊戲邏輯與狀態管理
+        // ==========================================
+
+        let currentSentenceData = {}; 
+        let visibleStages = []; 
+        let isCustomMode = {}; 
+        let availableOptions = [];
+
+        let expansionPools = {};
+        let expansionIndices = {};
+
+        window.onload = function() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+            }
+            initAudio();
+            initGame();
+        };
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function initGame() {
+            expansionPools['subject'] = [...SUBJECT_POOL];
+            shuffleArray(expansionPools['subject']);
+            expansionIndices['subject'] = 0;
+
+            expansionPools['verb'] = [...VERB_POOL];
+            shuffleArray(expansionPools['verb']);
+            expansionIndices['verb'] = 0;
+
+            for (const key in EXPANSION_DATA) {
+                expansionPools[key] = [...EXPANSION_DATA[key]];
+                shuffleArray(expansionPools[key]);
+                expansionIndices[key] = 0;
+            }
+
+            loadLevel();
+        }
+
+        function drawWord(key) {
+            let pool = expansionPools[key];
+            let idx = expansionIndices[key];
+
+            const word = pool[idx];
+            idx++;
+            if (idx >= pool.length) {
+                shuffleArray(pool);
+                idx = 0;
+            }
+            expansionIndices[key] = idx;
+            return word;
+        }
+
+        function loadLevel() {
+            const startSubject = drawWord('subject');
+            const startVerb = drawWord('verb');
+            
+            currentSentenceData = {
+                subject: startSubject,
+                verb: startVerb,
+                object: "", how: "", place: "", when: ""
+            };
+            isCustomMode = {
+                subject: false, verb: false, 
+                object: true, how: true, place: true, when: true 
+            };
+            
+            visibleStages = ['subject', 'verb'];
+            availableOptions = ['object', 'how', 'place', 'when']; 
+            
+            document.getElementById('reels-container').innerHTML = '';
+            
+            addCardToDOM('subject', false);
+            addCardToDOM('verb', false);
+
+            updateUI();
+            updateSentenceText();
+            playTone('start');
+        }
+
+        function nextQuestion() {
+            loadLevel();
+        }
+
+        function expandRandomly() {
+            // Check for empty cards first
+            const emptyExpansionKey = visibleStages.find(key => 
+                key !== 'subject' && key !== 'verb' && (!currentSentenceData[key] || currentSentenceData[key].trim() === "")
+            );
+
+            if (emptyExpansionKey) {
+                // Recycle empty card
+                visibleStages = visibleStages.filter(k => k !== emptyExpansionKey);
+                availableOptions.push(emptyExpansionKey);
+                currentSentenceData[emptyExpansionKey] = "";
+            } else if (availableOptions.length === 0) {
+                return; 
+            }
+
+            const randIndex = Math.floor(Math.random() * availableOptions.length);
+            const nextKey = availableOptions[randIndex];
+
+            availableOptions.splice(randIndex, 1);
+
+            currentSentenceData[nextKey] = ""; 
+            isCustomMode[nextKey] = true;
+
+            visibleStages.push(nextKey);
+            visibleStages.sort((a, b) => GRAMMAR_ORDER.indexOf(a) - GRAMMAR_ORDER.indexOf(b));
+            
+            const container = document.getElementById('reels-container');
+            container.innerHTML = '';
+            
+            visibleStages.forEach(key => {
+                const animate = (key === nextKey);
+                addCardToDOM(key, animate);
+            });
+            
+            setTimeout(() => {
+                const newInput = document.getElementById(`input-${nextKey}`);
+                if(newInput) newInput.focus();
+            }, 100);
+
+            playTone('expand');
+            updateUI();
+            updateSentenceText();
+        }
+
+        function addCardToDOM(key, animate) {
+            const container = document.getElementById('reels-container');
+            const word = currentSentenceData[key];
+            const styles = COLORS[key];
+            const label = CARD_TITLES[key];
+            
+            const card = document.createElement('div');
+            card.id = `card-${key}`;
+            
+            const animClass = animate ? 'new-card-anim' : '';
+
+            card.className = `${styles.bg} ${styles.text} border-b-4 ${styles.border} 
+                              rounded-xl p-2 w-[44%] md:w-40 h-28 flex flex-col items-center justify-between 
+                              shadow-md relative select-none ${animClass}`;
+
+            const contentId = `content-${key}`;
+            let contentHtml = '';
+            
+            if (isCustomMode[key]) {
+                contentHtml = `
+                    <input type="text" id="input-${key}" 
+                        class="custom-input text-xl md:text-2xl font-bold font-[ABeeZee] ${styles.text}" 
+                        value="${word}" 
+                        placeholder="?"
+                        autocomplete="off"
+                        oninput="handleInput('${key}', this.value)"
+                    />
+                `;
+            } else {
+                contentHtml = `
+                    <span id="span-${key}" class="text-xl md:text-2xl font-bold font-[ABeeZee] break-words text-center">${word}</span>
+                `;
+            }
+
+            const controlHtml = `
+                <div class="flex gap-2">
+                    <button onclick="spinOne('${key}')" class="text-xl hover:scale-110 transition active:scale-95 opacity-60 hover:opacity-100 p-1" title="Roll">
+                        🎲
+                    </button>
+                    <button onclick="toggleCustom('${key}')" class="text-lg hover:scale-110 transition opacity-50 hover:opacity-100 p-1" title="Edit">
+                        ✏️
+                    </button>
+                </div>
+            `;
+
+            card.innerHTML = `
+                <div class="text-[10px] font-bold tracking-widest opacity-50 mb-1">${label}</div>
+                <div class="flex-grow flex items-center justify-center w-full px-1" id="${contentId}">
+                    ${contentHtml}
+                </div>
+                ${controlHtml}
+            `;
+            
+            container.appendChild(card);
+        }
+
+        function handleInput(key, value) {
+            currentSentenceData[key] = value;
+            updateSentenceText();
+        }
+
+        function toggleCustom(key) {
+            isCustomMode[key] = !isCustomMode[key];
+            refreshCardContent(key);
+            
+            if (isCustomMode[key]) {
+                setTimeout(() => {
+                    const input = document.getElementById(`input-${key}`);
+                    if (input) input.focus();
+                }, 50);
+            }
+        }
+
+        function spinOne(key) {
+            const newWord = drawWord(key);
+            currentSentenceData[key] = newWord;
+            
+            const inputEl = document.getElementById(`input-${key}`);
+            const spanEl = document.getElementById(`span-${key}`);
+            
+            if (inputEl) inputEl.value = newWord;
+            if (spanEl) spanEl.innerText = newWord;
+            
+            const contentDiv = document.getElementById(`content-${key}`);
+            if (contentDiv) {
+                contentDiv.classList.remove('text-pop');
+                void contentDiv.offsetWidth; 
+                contentDiv.classList.add('text-pop');
+            }
+
+            playTone('spin');
+            updateSentenceText();
+        }
+
+        function refreshCardContent(key) {
+            const contentDiv = document.getElementById(`content-${key}`);
+            if (!contentDiv) return;
+            
+            const word = currentSentenceData[key];
+            const styles = COLORS[key];
+            
+            if (isCustomMode[key]) {
+                contentDiv.innerHTML = `
+                    <input type="text" id="input-${key}" 
+                        class="custom-input text-xl md:text-2xl font-bold font-[ABeeZee] ${styles.text}" 
+                        value="${word}" 
+                        oninput="handleInput('${key}', this.value)"
+                    />
+                `;
+            } else {
+                contentDiv.innerHTML = `
+                    <span id="span-${key}" class="text-xl md:text-2xl font-bold font-[ABeeZee] break-words text-center">${word}</span>
+                `;
+            }
+        }
+
+        function updateSentenceText() {
+            const displayDiv = document.getElementById('sentence-display');
+            const validKeys = visibleStages.filter(k => currentSentenceData[k].trim() !== "");
+            
+            if (validKeys.length === 0) {
+                displayDiv.innerHTML = "Loading...";
+                return;
+            }
+
+            const speakerBtn = `
+                <button onclick="readSentence()" class="inline-block mr-2 text-2xl hover:scale-110 active:scale-95 transition-transform align-middle text-indigo-500" title="Read Sentence">
+                    🔊
+                </button>
+            `;
+
+            const html = validKeys.map(key => {
+                const w = currentSentenceData[key];
+                const colorClass = COLORS[key].text;
+                return `<span class="sentence-word ${colorClass}">${w}</span>`;
+            }).join('');
+
+            displayDiv.innerHTML = speakerBtn + html + '<span class="sentence-period">.</span>';
+        }
+
+        function updateUI() {
+            const btnExpand = document.getElementById('btn-expand');
+            if (availableOptions.length === 0) {
+                // If there are no empty slots to fill, hide button
+                const hasEmpty = visibleStages.some(key => 
+                    key !== 'subject' && key !== 'verb' && (!currentSentenceData[key] || currentSentenceData[key].trim() === "")
+                );
+                
+                if (hasEmpty) {
+                    btnExpand.classList.remove('hidden');
+                } else {
+                    btnExpand.classList.add('hidden');
+                }
+            } else {
+                btnExpand.classList.remove('hidden');
+            }
+        }
+
+        // ==========================================
+        // 3. Audio (Happy Pitch)
+        // ==========================================
+        
+        function getPreferredVoice() {
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length === 0) return null;
+            
+            let preferred = voices.find(v => v.name.includes("Samantha"));
+            if (!preferred) preferred = voices.find(v => v.name.includes("Zira"));
+            if (!preferred) preferred = voices.find(v => v.name.includes("Google US English"));
+            if (!preferred) preferred = voices.find(v => v.lang.startsWith("en") && (v.name.includes("Female") || v.name.includes("Woman")));
+            if (!preferred) preferred = voices.find(v => v.lang.startsWith("en"));
+            return preferred;
+        }
+
+        function readSentence() {
+            const validKeys = visibleStages.filter(k => currentSentenceData[k].trim() !== "");
+            const textToSpeak = validKeys.map(k => currentSentenceData[k]).join(' ');
+
+            if (!textToSpeak) return;
+
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            const voice = getPreferredVoice();
+            if (voice) utterance.voice = voice;
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9; 
+            utterance.pitch = 1.15; 
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = function() {
+                window.speechSynthesis.getVoices();
+            };
+        }
+
+        async function initAudio() {
+            document.body.addEventListener('click', async () => {
+                if (Tone.context.state !== 'running') await Tone.start();
+            }, { once: true });
+        }
+
+        const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+        function playTone(type) {
+            if (Tone.context.state !== 'running') return;
+            const now = Tone.now();
+            if (type === 'start') {
+                synth.triggerAttackRelease(["C4", "E4"], "8n", now);
+            } else if (type === 'expand') {
+                const notes = ["G4", "B4", "D5", "G5"];
+                const randNote = notes[Math.floor(Math.random() * notes.length)];
+                synth.triggerAttackRelease(randNote, "8n", now);
+            } else if (type === 'spin') {
+                synth.triggerAttackRelease("A4", "32n", now);
+            }
+        }
+    </script>
+</body>
+</html>
