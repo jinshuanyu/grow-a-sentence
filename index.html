@@ -62,7 +62,7 @@
             color: #312e81;
         }
 
-        /* 黃色文字最終定案：使用 #ffdc11 */
+        /* 黃色文字 (無陰影, #ffdc11) */
         .text-yellow-pop {
             color: #ffdc11; 
         }
@@ -122,7 +122,7 @@
 
     <script>
         // ==========================================
-        // 1. 文法與資料庫 (精簡字數版)
+        // 1. 文法與資料庫
         // ==========================================
         
         const GRAMMAR_ORDER = ['subject', 'verb', 'object', 'how', 'place', 'when'];
@@ -139,7 +139,6 @@
             "drove", "drew", "watched", "packed", "washed"
         ];
 
-        // 這裡只保留短詞，避免卡片截斷
         const EXPANSION_DATA = {
             object: [ 
                 "a pizza", "a song", "a ball", "water", "a book", 
@@ -317,7 +316,6 @@
             
             const animClass = animate ? 'new-card-anim' : '';
 
-            // 修改處：加大寬度 (w-48, 47%)，減少內距 (p-1)
             card.className = `${styles.bg} ${styles.text} border-b-4 ${styles.border} 
                               rounded-xl p-1 w-[47%] md:w-48 h-28 flex flex-col items-center justify-between 
                               shadow-md relative select-none ${animClass}`;
@@ -341,7 +339,6 @@
                 `;
             }
 
-            // 修改處：5W1H 標籤字體加大 (text-xs = 12px)
             const controlHtml = `
                 <div class="flex gap-2 mb-1">
                     <button onclick="spinOne('${key}')" class="text-xl hover:scale-110 transition active:scale-95 opacity-60 hover:opacity-100 p-1" title="Roll">
@@ -385,11 +382,9 @@
             const newWord = drawWord(key);
             currentSentenceData[key] = newWord;
             
-            const inputEl = document.getElementById(`input-${key}`);
-            const spanEl = document.getElementById(`span-${key}`);
+            isCustomMode[key] = false; 
             
-            if (inputEl) inputEl.value = newWord;
-            if (spanEl) spanEl.innerText = newWord;
+            refreshCardContent(key);
             
             const contentDiv = document.getElementById(`content-${key}`);
             if (contentDiv) {
@@ -450,16 +445,9 @@
 
         function updateUI() {
             const btnExpand = document.getElementById('btn-expand');
-            if (availableOptions.length === 0) {
-                const hasEmpty = visibleStages.some(key => 
-                    key !== 'subject' && key !== 'verb' && (!currentSentenceData[key] || currentSentenceData[key].trim() === "")
-                );
-                
-                if (hasEmpty) {
-                    btnExpand.classList.remove('hidden');
-                } else {
-                    btnExpand.classList.add('hidden');
-                }
+            // 嚴格模式：滿 6 張卡片就隱藏擴充按鈕
+            if (visibleStages.length >= 6) {
+                btnExpand.classList.add('hidden');
             } else {
                 btnExpand.classList.remove('hidden');
             }
