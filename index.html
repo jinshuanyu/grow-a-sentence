@@ -62,7 +62,7 @@
             color: #312e81;
         }
 
-        /* 黃色文字最終定案：使用您指定的 #ffdc11 */
+        /* 黃色文字最終定案：使用 #ffdc11 */
         .text-yellow-pop {
             color: #ffdc11; 
         }
@@ -122,7 +122,7 @@
 
     <script>
         // ==========================================
-        // 1. 文法與資料庫
+        // 1. 文法與資料庫 (精簡字數版)
         // ==========================================
         
         const GRAMMAR_ORDER = ['subject', 'verb', 'object', 'how', 'place', 'when'];
@@ -133,32 +133,30 @@
             "A robot", "The cat", "Batman", "A giant"
         ];
 
-        // Ambitransitive Verbs Only
         const VERB_POOL = [
             "ate", "cooked", "sang", "painted", "wrote", 
             "read", "played", "cleaned", "drank", "studied",
             "drove", "drew", "watched", "packed", "washed"
         ];
 
+        // 這裡只保留短詞，避免卡片截斷
         const EXPANSION_DATA = {
             object: [ 
-                "a pizza", "a song", "the ball", "a picture", "some water", 
-                "a big apple", "the door", "a funny story", "his homework", "a bug",
-                "a rainbow", "the moon", "a new toy", "the bus", "dinner", "lunch"
+                "a pizza", "a song", "a ball", "water", "a book", 
+                "an apple", "the door", "a story", "a bug", "the car",
+                "the moon", "a toy", "a bus", "dinner", "lunch"
             ],
             how: [ 
                 "loudly", "quickly", "happily", "slowly", "sadly", 
-                "carefully", "quietly", "with a smile", "angrily", "excitedly",
-                "secretly", "wildly"
+                "quietly", "well", "hard", "wildly", "fast"
             ],
             place: [ 
-                "in the park", "at home", "in the kitchen", "at school", "under the tree", 
-                "in the car", "on the bed", "outside", "in the garden", "by the river",
-                "on Mars", "in a box"
+                "at home", "at school", "in a car", "in bed", "outside", 
+                "here", "there", "in a box", "at the park"
             ],
             when: [ 
-                "yesterday", "last night", "in the morning", "after school", "at noon", 
-                "before dinner", "suddenly", "last week", "today", "at midnight"
+                "today", "now", "at noon", "at night", "soon", 
+                "later", "then", "just now"
             ]
         };
 
@@ -167,8 +165,6 @@
             object: "WHAT?", how: "HOW?", place: "WHERE?", when: "WHEN?" 
         };
 
-        // 顏色設定：
-        // 黃色已改為 #ffdc11 (text-yellow-pop)
         const COLORS = {
             subject: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-rose-600' },
             verb:    { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-500' },
@@ -269,13 +265,11 @@
         }
 
         function expandRandomly() {
-            // Check for empty cards first
             const emptyExpansionKey = visibleStages.find(key => 
                 key !== 'subject' && key !== 'verb' && (!currentSentenceData[key] || currentSentenceData[key].trim() === "")
             );
 
             if (emptyExpansionKey) {
-                // Recycle empty card
                 visibleStages = visibleStages.filter(k => k !== emptyExpansionKey);
                 availableOptions.push(emptyExpansionKey);
                 currentSentenceData[emptyExpansionKey] = "";
@@ -323,8 +317,9 @@
             
             const animClass = animate ? 'new-card-anim' : '';
 
+            // 修改處：加大寬度 (w-48, 47%)，減少內距 (p-1)
             card.className = `${styles.bg} ${styles.text} border-b-4 ${styles.border} 
-                              rounded-xl p-2 w-[44%] md:w-40 h-28 flex flex-col items-center justify-between 
+                              rounded-xl p-1 w-[47%] md:w-48 h-28 flex flex-col items-center justify-between 
                               shadow-md relative select-none ${animClass}`;
 
             const contentId = `content-${key}`;
@@ -342,12 +337,13 @@
                 `;
             } else {
                 contentHtml = `
-                    <span id="span-${key}" class="text-xl md:text-2xl font-bold font-[ABeeZee] break-words text-center">${word}</span>
+                    <span id="span-${key}" class="text-xl md:text-2xl font-bold font-[ABeeZee] break-words text-center leading-tight">${word}</span>
                 `;
             }
 
+            // 修改處：5W1H 標籤字體加大 (text-xs = 12px)
             const controlHtml = `
-                <div class="flex gap-2">
+                <div class="flex gap-2 mb-1">
                     <button onclick="spinOne('${key}')" class="text-xl hover:scale-110 transition active:scale-95 opacity-60 hover:opacity-100 p-1" title="Roll">
                         🎲
                     </button>
@@ -358,7 +354,7 @@
             `;
 
             card.innerHTML = `
-                <div class="text-[10px] font-bold tracking-widest opacity-50 mb-1">${label}</div>
+                <div class="text-xs font-bold tracking-widest opacity-50 mt-1">${label}</div>
                 <div class="flex-grow flex items-center justify-center w-full px-1" id="${contentId}">
                     ${contentHtml}
                 </div>
@@ -423,7 +419,7 @@
                 `;
             } else {
                 contentDiv.innerHTML = `
-                    <span id="span-${key}" class="text-xl md:text-2xl font-bold font-[ABeeZee] break-words text-center">${word}</span>
+                    <span id="span-${key}" class="text-xl md:text-2xl font-bold font-[ABeeZee] break-words text-center leading-tight">${word}</span>
                 `;
             }
         }
@@ -455,7 +451,6 @@
         function updateUI() {
             const btnExpand = document.getElementById('btn-expand');
             if (availableOptions.length === 0) {
-                // If there are no empty slots to fill, hide button
                 const hasEmpty = visibleStages.some(key => 
                     key !== 'subject' && key !== 'verb' && (!currentSentenceData[key] || currentSentenceData[key].trim() === "")
                 );
@@ -471,7 +466,7 @@
         }
 
         // ==========================================
-        // 3. Audio (Happy Pitch)
+        // 3. Audio (Happy Pitch & Read Fix)
         // ==========================================
         
         function getPreferredVoice() {
@@ -492,8 +487,6 @@
 
             if (!originalText) return;
 
-            // 偷吃步：把 read 替換成 red (紅色)，這樣電腦就會發出正確的過去式音 /rɛd/
-            // \b 代表單字邊界，確保只替換單獨的 read
             const textForAudio = originalText.replace(/\bread\b/gi, "red");
 
             window.speechSynthesis.cancel();
